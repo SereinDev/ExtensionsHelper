@@ -1,10 +1,6 @@
 namespace ExtensionsHelper.Models.Plugins;
 
-public class PluginCheckResult
+public record PluginCheckResult(string Id, bool Success, string? Reason = null)
 {
-    public bool Success { get; init; }
 
-    public string Id { get; set; } = string.Empty;
-
-    public string? Reason { get; set; }
 }

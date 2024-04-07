@@ -19,12 +19,14 @@ public sealed class AppBuilder
     public AppBuilder(Config config)
     {
         _hostAppBuilder = new HostApplicationBuilder();
+        _hostAppBuilder.Logging.ClearProviders();
 
         Services.AddSingleton(config);
 
         Services.AddSingleton<RawContentHttpClient>();
         Services.AddSingleton<PluginsManager>();
         Services.AddSingleton<UserProvider>();
+        Services.AddSingleton<RepoProvider>();
 
         Services.AddSingleton<ILogger, CliLogger>((services) => new CliLogger(config));
         Services.AddSingleton(

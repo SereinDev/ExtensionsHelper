@@ -38,53 +38,69 @@ public class PluginsManager
             throw new NotSupportedException($"插件路径\"{_path}\"不存在");
     }
 
-    public async Task Check()
+    public async Task<IReadOnlyList<PluginCheckResult>> Check()
     {
         var list = new List<PluginCheckResult>();
 
         foreach (var path in Directory.GetDirectories(_path))
         {
             var id = Path.GetFileName(path);
-            try { }
+            _logger.LogDebug("[{}] 路径: {}", id, path);
+            try
+            {
+                var index = GetIndex(path);
+
+                Ensure.NotEmpty(index.Authors, nameof(index.Authors));
+
+                Ensure.True(
+                    index.Authors.All(
+                        (author) => _userChecker.Exists(author.Name).GetAwaiter().GetResult()
+                    ),
+                    "存在不正确的用户"
+                );
+                _logger.LogInformation("[{}] 作者检查通过", id);
+
+                var info = await _rawContentHttpClient.GetPluginInfo(
+                    index.Owner,
+                    index.RepoName,
+                    index.Branch,
+                    index.Path
+                );
+
+                Ensure.True(id == info.Id, "插件Id不匹配");
+                _logger.LogInformation("[{}] 插件Id检查通过", id);
+
+                Ensure.NotNullOrEmpty(info.Name, nameof(info.Name));
+                _logger.LogInformation("[{}] 插件名称检查通过", id);
+
+                Ensure.NotEmpty(info.TargetingSerein, nameof(info.TargetingSerein));
+                _logger.LogInformation("[{}] 适用版本检查通过", id);
+
+                Ensure.NotEmpty(info.Tags, nameof(info.Tags));
+                _logger.LogInformation("[{}] 插件标签检查通过", id);
+
+                list.Add(new(id, true));
+            }
             catch (Exception e)
             {
-                _logger.LogError(e, "[{}] 插件检查失败", id);
+                _logger.LogDebug(e, "[{}] 插件检查失败: {}", id, e);
+                _logger.LogError(e, "[{}] 插件检查失败: {}", id, $"{e.GetType()}: {e.Message}");
+                list.Add(new(id, false, $"{e.GetType()}: {e.Message}"));
             }
         }
+
+        return list;
     }
 
-    // public async void CheckPlugin(string path)
-    // {
-    //     var jsonPath = Path.Combine(path, "plugin-index.json");
-    //     if (!File.Exists(jsonPath))
-    //         throw new InvalidOperationException("文件夹中不存在 plugin-index.json");
-    // }
-
-    public void CheckIndex(string content)
+    private PluginIndex GetIndex(string path)
     {
+        var jsonPath = Path.Combine(path, "plugin-index.json");
+
         var index =
-            JsonSerializer.Deserialize<PluginIndex>(content, JsonSerializerOptionsFactory.Json)
-            ?? throw new NullReferenceException("Json文件为空");
+            JsonSerializer.Deserialize<PluginIndex>(File.ReadAllText(jsonPath), JsonSerializerOptionsFactory.Json)
+            ?? throw new InvalidOperationException("Json文件为空");
 
-        Ensure.NotEmpty(index.Authors, nameof(index.Authors));
-        Ensure.True(
-            index.Authors.All(
-                (author) => _userChecker.Exists(author.Name).GetAwaiter().GetResult()
-            ),
-            "存在不正确的用户"
-        );
-    }
-
-    public async Task CheckInfo(string id, PluginIndex index)
-    {
-        var info = await _rawContentHttpClient.GetPluginInfo(
-            index.Owner,
-            index.RepoName,
-            index.Branch,
-            index.Path
-        );
-
-        Ensure.True(id == info.Id, "插件Id不匹配");
-        Ensure.NotNullOrEmpty(info.Name, nameof(info.Name));
+        _logger.LogDebug("插件索引JSON: {}", JsonSerializer.Serialize(index));
+        return index;
     }
 }
