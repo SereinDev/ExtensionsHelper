@@ -54,15 +54,18 @@ public class CliLogger : ILogger
                 else
                     AnsiConsole.MarkupLineInterpolated($"[mediumpurple4]Debug[/] {text}");
                 break;
+
             case LogLevel.Information:
                 AnsiConsole.MarkupLineInterpolated($"Info  {text}");
                 break;
+
             case LogLevel.Warning:
                 if (_inGitHubAction)
                     AnsiConsole.MarkupLineInterpolated($"::warning::[yellow bold]Warn  {text}[/]");
                 else
                     AnsiConsole.MarkupLineInterpolated($"[yellow bold]]Warn  {text}[/]");
                 break;
+
             case LogLevel.Error:
             case LogLevel.Critical:
                 if (_inGitHubAction)
@@ -70,7 +73,9 @@ public class CliLogger : ILogger
                 else
                     AnsiConsole.MarkupLineInterpolated($"[red bold]Error {text}[/]");
                 break;
+
             case LogLevel.None:
+            default:
                 break;
         }
     }

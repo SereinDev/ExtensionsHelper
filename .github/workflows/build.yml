@@ -10,25 +10,30 @@ on:
 
   workflow_dispatch:
 
-permissions:
-  id-token: write
-  contents: write
-  checks: write
-
 jobs:
   build:
     runs-on: windows-latest
 
+    strategy:
+      matrix:
+        runtimeIdentifier: [win-x64, linux-x64, osx-x64]
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-      
+
       - name: Install .NET
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 7.0.x
 
-      - name: Build 
+      - name: Build
         shell: powershell
         run: |
-          dotnet build
+          dotnet publish src/ExtensionsHelper.csproj --no-self-contained -p:PublishSingleFile=true -p:IncludeContentInSingleFile=true -p:RuntimeIdentifier=${{ matrix.runtimeIdentifier }} -f net7.0
+
+      - name: Upload binary files
+        uses: actions/upload-artifact@v3
+        with:
+          name: ExtensionsHelper.${{ matrix.runtimeIdentifier }}
+          path: src/bin/Debug/net7.0/${{ matrix.runtimeIdentifier }}/publish

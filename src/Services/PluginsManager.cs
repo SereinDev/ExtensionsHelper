@@ -6,10 +6,13 @@ using System.Text.Json;
 using System.Threading.Tasks;
 
 using ExtensionsHelper.Models;
+using ExtensionsHelper.Models.Exceptions;
 using ExtensionsHelper.Models.Plugins;
 using ExtensionsHelper.Utils;
 
 using Microsoft.Extensions.Logging;
+
+using Spectre.Console;
 
 namespace ExtensionsHelper.Services;
 
@@ -46,9 +49,14 @@ public class PluginsManager
         {
             var id = Path.GetFileName(path);
             _logger.LogDebug("[{}] 路径: {}", id, path);
+
+            PluginIndex? index = null;
+            PluginInfo? info = null;
+            PluginCheckResult result;
+
             try
             {
-                var index = GetIndex(path);
+                index = GetIndex(path);
 
                 Ensure.NotEmpty(index.Authors, nameof(index.Authors));
 
@@ -60,12 +68,12 @@ public class PluginsManager
                 );
                 _logger.LogInformation("[{}] 作者检查通过", id);
 
-                var info = await _rawContentHttpClient.GetPluginInfo(
-                    index.Owner,
-                    index.RepoName,
-                    index.Branch,
-                    index.Path
-                );
+                info = await _rawContentHttpClient.GetPluginInfo(
+                   index.Owner,
+                   index.RepoName,
+                   index.Branch,
+                   index.Path
+               );
 
                 Ensure.True(id == info.Id, "插件Id不匹配");
                 _logger.LogInformation("[{}] 插件Id检查通过", id);
@@ -79,14 +87,16 @@ public class PluginsManager
                 Ensure.NotEmpty(info.Tags, nameof(info.Tags));
                 _logger.LogInformation("[{}] 插件标签检查通过", id);
 
-                list.Add(new(id, true));
+                result = new(id, true, index, info);
             }
             catch (Exception e)
             {
                 _logger.LogDebug(e, "[{}] 插件检查失败: {}", id, e);
                 _logger.LogError(e, "[{}] 插件检查失败: {}", id, $"{e.GetType()}: {e.Message}");
-                list.Add(new(id, false, $"{e.GetType()}: {e.Message}"));
+                result = new(id, false, index, info, $"{e.GetType()}: {e.Message}");
             }
+
+            list.Add(result);
         }
 
         return list;
@@ -98,7 +108,7 @@ public class PluginsManager
 
         var index =
             JsonSerializer.Deserialize<PluginIndex>(File.ReadAllText(jsonPath), JsonSerializerOptionsFactory.Json)
-            ?? throw new InvalidOperationException("Json文件为空");
+            ?? throw new CheckFailureExceptionException("Json文件为空");
 
         _logger.LogDebug("插件索引JSON: {}", JsonSerializer.Serialize(index));
         return index;

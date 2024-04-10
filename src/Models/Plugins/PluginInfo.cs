@@ -22,4 +22,6 @@ public class PluginInfo
 
     [JsonRequired]
     public Version[] TargetingSerein { get; init; } = Array.Empty<Version>();
+
+    public PluginConfig Config { get; init; } = new();
 }

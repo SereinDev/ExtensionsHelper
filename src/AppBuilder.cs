@@ -27,6 +27,7 @@ public sealed class AppBuilder
         Services.AddSingleton<PluginsManager>();
         Services.AddSingleton<UserProvider>();
         Services.AddSingleton<RepoProvider>();
+        Services.AddSingleton<SummaryGenerator>();
 
         Services.AddSingleton<ILogger, CliLogger>((services) => new CliLogger(config));
         Services.AddSingleton(

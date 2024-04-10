@@ -75,6 +75,8 @@ public static class Program
         }).Build();
 
         host.Start();
-        await host.Services.GetRequiredService<PluginsManager>().Check();
+
+        var results = await host.Services.GetRequiredService<PluginsManager>().Check();
+        await host.Services.GetRequiredService<SummaryGenerator>().WriteOutput(results);
     }
 }

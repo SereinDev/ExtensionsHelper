@@ -9,5 +9,5 @@ public class DependencyInfo
     public string Id { get; init; } = string.Empty;
 
     [JsonRequired]
-    public Version Version { get; init; } = new();
+    public Version[] Version { get; init; } = Array.Empty<Version>();
 }
